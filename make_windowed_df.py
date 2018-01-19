@@ -1,13 +1,12 @@
-def make_windowed(dataset, seq_length, horizon, dense, keep_cols, region_col, split=0.2, predict_current=False):
+def make_windowed(dataset, seq_length, horizon, feat_cols, resp_cols, region_col, split=0.2, predict_current=False):
     """
     This function takes data and creates a windowed dataframe to be used in time-series analysis. 
 
     dataset: [panda df] the raw dataframe that a time series windowed df will be created from
     seq_length: [int] the sequence length, the amount of time to be used to perform the time-series analysis
     horizon: [int] how far into the future you wish to predict
-    dense: [int] the number of response columns to be predicted. This is also used in the DL model, it signifies the dense layer
-    keep_cols: [list] a list a column titles to be used for prediction. The response columns must come first, followed by
-                the feature columns. 
+    feat_cols: [list] a list of column names that make up the feature space
+    resp_cols: [list] a list of column names that make up the response
     region_col: [str] the name of the column that different time-series will be created on, i.e. different regions that contain
                 independent time-series.
     split: [float] A percent split for the test set, i.e. 0.2 equals a 80/20 split for the train/test sets.
@@ -18,39 +17,46 @@ def make_windowed(dataset, seq_length, horizon, dense, keep_cols, region_col, sp
 
     if ((predict_current) and (horizon is not 1)):
         raise ValueError('If predict_current is set to True, then Horizon must be set to 1.')
+    else:
+        pass
 
-    if (any(dataset[keep_cols].isnull().sum()) is not 0):
+    if (any(dataset[feat_cols + resp_cols].isnull().sum()) != 0):
         raise ValueError(
             'There is missing data in at least one of the columns supplied in keep_cols. Please impute this missing data as needed.')
+    else:
+        pass
 
-    stations = list(dataset[region_col].unique())
-    agweather = {}
-    for i in range(len(stations)):
-        agweather.update({stations[i]: dataset[dataset[region_col] == stations[i]]})
-    features = len(keep_cols[dense:])
+    # check to see if there are same features in both the response and the features list
+    resp_and_feats = [var for var in feat_cols if var in resp_cols]
+
+    dense = len(resp_cols)
+    regions = list(dataset[region_col].unique())
+    big_dict = {}
+
+    for i in range(len(regions)):
+        big_dict.update({regions[i]: dataset[dataset[region_col] == regions[i]]})
+    features = len(feat_cols)
 
     train_X_all, test_X_all = np.empty((0, seq_length, features)), np.empty((0, seq_length, features))
     train_y_all, test_y_all = np.empty((0, dense)), np.empty((0, dense))
 
-    for station in stations:
-        agweather[station] = agweather[station][keep_cols]
+    for region in regions:
+        big_dict[region] = big_dict[region][resp_cols + feat_cols]
+        if resp_and_feats:
+            big_dict[region] = big_dict[region].loc[:, ~big_dict[region].columns.duplicated()]
+        else:
+            pass
 
-        length = len(agweather[station])
+        length = len(big_dict[region])
+        print(length)
         test_length = int(length * split)  # 20% test set
-        dim = agweather[station].shape
 
-        df_x = agweather[station][keep_cols[dense:]]
-
-        df_y = agweather[station][keep_cols[0:dense]]
-
-        dim_x = len(df_x.columns)
-        dim_y = len(df_y.columns)
-
-        train_length = length - test_length
+        df_x = big_dict[region][feat_cols]
+        df_y = big_dict[region][resp_cols]
         ts_x = df_x.values
         ts_y = df_y.values
-        ts_train_x = ts_x[:train_length]
-        ts_train_y = ts_y[:train_length]
+
+        train_length = length - test_length
 
         train_X, train_y, test_X, test_y = [], [], [], []
 
