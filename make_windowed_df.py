@@ -22,7 +22,7 @@ def make_windowed(dataset, seq_length, horizon, feat_cols, resp_cols, region_col
 
     if (any(dataset[feat_cols + resp_cols].isnull().sum()) != 0):
         raise ValueError(
-            'There is missing data in at least one of the columns supplied in keep_cols. Please impute this missing data as needed.')
+            'There is missing data in at least one of the columns supplied. Please impute this missing data as needed.')
     else:
         pass
 
