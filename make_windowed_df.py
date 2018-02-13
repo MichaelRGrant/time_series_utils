@@ -49,7 +49,7 @@ def make_windowed(dataset, seq_length, horizon, feat_cols, resp_cols, region_col
         train_X_all, test_X_all = np.empty((0, seq_length, features)), np.empty((0, seq_length, features))
         train_y_all, test_y_all = np.empty((0, response)), np.empty((0, response))
     else:
-        train_X_all, test_X_all = np.empty((0, sequence_length, features)), np.empty((0, sequence_length, features))
+        train_X_all, test_X_all = np.empty((0, seq_length, features)), np.empty((0, seq_length, features))
         train_y_all, test_y_all = np.empty((0, resp_width, response)), np.empty((0, resp_width, response))
 
     for region in regions:
@@ -79,11 +79,11 @@ def make_windowed(dataset, seq_length, horizon, feat_cols, resp_cols, region_col
             q = 0
 
         if (resp_width != 0):
-            for i in range(train_length - sequence_length - horizon - resp_width):
-                train_X.append(ts_x[i:i + sequence_length])
-                train_y.append(ts_y[i + sequence_length + horizon - z:i + sequence_length + horizon - z + resp_width])
+            for i in range(train_length - seq_length - horizon - resp_width):
+                train_X.append(ts_x[i:i + seq_length])
+                train_y.append(ts_y[i + seq_length + horizon - z:i + seq_length + horizon - z + resp_width])
             for i in range(-test_length, -resp_width):
-                test_X.append(ts_x[i - sequence_length - horizon + 1:i - horizon + 1])
+                test_X.append(ts_x[i - seq_length - horizon + 1:i - horizon + 1])
                 test_y.append(ts_y[i - q:i - q + (resp_width)])
 
         else:
