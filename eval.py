@@ -22,8 +22,8 @@ class Evaluate:
         self.resp_cols = resp_cols
         self.dense = len(resp_cols)
 
-    def compute_mae(self, model, X, y, reshape=False):
-        forecasts = model.predict(X)
+    def compute_mae(self, fitted_model, X, y, reshape=False):
+        forecasts = fitted_model.predict(X)
         if reshape:
             dense = forecasts.shape[1]
             forecasts = forecasts.reshape(forecasts.shape[0], dense)
