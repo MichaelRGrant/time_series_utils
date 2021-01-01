@@ -1,5 +1,4 @@
 # Time Series Utilities
-_____
 
 ### Modules
 **window.py**
@@ -14,6 +13,9 @@ point. In addition, if the user wants to predict at many timepoints in the futur
 can also occur.
 
 Another feature of this module is the ability to normalize over the entire data or to normalize by individual groups. 
+Also since the output for the training and testing data is a numpy array, the dictionary has a key `group_idx` which
+is a dictionary of group names for the keys and start and end indicies for each group. This allows the user to easily know 
+how the model is performing on each individual group. This is useful during model evaluation. 
 
 ```
 window = Window(
