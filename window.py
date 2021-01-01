@@ -1,12 +1,10 @@
 import itertools
-import os
-from typing import List, Optional, Tuple, Union
+from typing import Optional
 
 import numpy as np
 import pandas as pd
 from easydict import EasyDict
 from sklearn.preprocessing import LabelEncoder
-from sklearn.utils import class_weight
 from tqdm import tqdm_notebook
 
 
@@ -94,12 +92,37 @@ class Window:
         dataset: pd.DataFrame,
         split: Optional[int] = 0.2,
         norm_params: Optional[EasyDict] = None,
-        save_normal_params: bool = False,
         test_set: bool = False,
         scale: str = "minmax",
         min_val: int = 0,
         max_val: int = 1,
-    ):
+    ) -> EasyDict:
+        """
+        This method creates the actual training and/or testing sets of data as an EasyDict.
+        Both the X and y datasets are created.
+
+        Parameters:
+        -------
+        dataset:
+            The data to be used to create the windowed dataframe.
+        split:
+            This is optional either a float for the fraction of the data to be the test set
+            or None if the data is manually split beforehand.
+        norm_params:
+            If test_set is True then norm_params from the training set will be required.
+        test_set:
+            Set to true if this is a test/validation set.
+        scale:
+            Type of scaling to take place: one of {"standard", "minmax"}
+        min_val:
+            Used for minmax, the min value
+        max_val:
+            Used for minmax, the max value
+
+        Returns:
+        -------
+        EasyDict
+        """
 
         # Check for inf values
         if any(np.isinf(dataset[self.feat_cols]).sum()) != 0:
@@ -111,6 +134,10 @@ class Window:
             raise ValueError(
                 "There is missing data in at least one of the columns supplied in keep_cols. Please impute this "
                 "missing data as needed."
+            )
+        if test_set and norm_params is None:
+            raise ValueError(
+                "If `test_set` is True then `norm_params` must not be None."
             )
 
         # check to see if there are same features in both the response and the features list
@@ -419,7 +446,11 @@ class Window:
 
         Parameters:
         -------
-        norm_params: easydict
+        train_X: np.array
+        train_y: np.array
+        test_X: np.array
+        test_y: np.array
+        norm_params: EasyDict
             The parameters used to normalize. These are obtained from the training set and used
             to normalize the testing set.
         scale_type: str
@@ -546,6 +577,36 @@ class Window:
         scale_type: str = "both",
         group: Optional[str] = None,
     ):
+        """
+        Take the data and normalizes by minmax.
+
+        Parameters:
+        -------
+        min_val: int
+            The minimum value
+        max_val: int
+            The maximum value
+        train_X: np.array
+        train_y: np.array
+        test_X: np.array
+        test_y: np.array
+        norm_params: EasyDict
+            The parameters used to normalize. These are obtained from the training set and used
+            to normalize the testing set.
+        scale_type: str
+            This dictates what type of normalization that should take place.
+                "both": If the data has been split previously, then input both the
+                         training and testing sets.
+                "training_only": This will normalize the training set only. The normalization
+                                 parameters will be saved in the class object.
+                "testing_only": This will normalize the test set and requires the input of
+                                normalization parameters from the training set.
+
+        Returns:
+        -------
+        Tuple
+            Returns EasyDicts for the train/test data and the normalizing parameters.
+        """
         if scale_type not in ["both", "training_only", "testing_only"]:
             raise ValueError(
                 "`scale_type` must be one of {'both', 'training_only', 'testing_only'}"
@@ -693,15 +754,21 @@ class Window:
             return EasyDict(train_test_dict)
 
 
-def make_start_end_index_dict(end_idx):
+def make_start_end_index_dict(end_idx: int) -> dict:
     """
     Create a dictionary with the key as the group and the value a list with the start and
     end indices of that group in the final numpy array. The final time series array
     has all groups concatenated so this will allow for those groups to be pulled out
     so individual groups can be analyzed.
 
-    :param end_idx:
-    :return: 
+    Parameters:
+    -------
+        end_idx: int
+            The ending index of each group.
+
+    Returns:
+    -------
+    dict: group_indicies
     """
     group_indices = {}
     end_idx_accum = list(itertools.accumulate([x[1] + 1 for i, x in enumerate(end_idx)]))
