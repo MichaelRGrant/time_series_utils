@@ -1,5 +1,5 @@
 import itertools
-from typing import Optional
+from typing import List, Optional
 
 import numpy as np
 import pandas as pd
@@ -53,15 +53,15 @@ class Window:
 
     def __init__(
         self,
-        seq_length,
-        horizon,
-        feat_cols,
-        resp_cols,
-        group_col,
-        resp_width,
-        predict_current=False,
-        classification=False,
-        scale_by_group=False,
+        seq_length: int,
+        horizon: int,
+        feat_cols: List[str],
+        resp_cols: List[str],
+        group_col: str,
+        resp_width: int,
+        predict_current: bool = False,
+        classification: bool = False,
+        scale_by_group: bool = False,
     ):
         self.seq_length = seq_length
         self.horizon = horizon
@@ -771,10 +771,12 @@ def make_start_end_index_dict(end_idx: int) -> dict:
     dict: group_indicies
     """
     group_indices = {}
-    end_idx_accum = list(itertools.accumulate([x[1] + 1 for i, x in enumerate(end_idx)]))
+    end_idx_accum = list(
+        itertools.accumulate([x[1] + 1 for i, x in enumerate(end_idx)])
+    )
     for i, (group, end_idx) in enumerate(zip([x[0] for x in end_idx], end_idx_accum)):
         if i == 0:
             group_indices[group] = (0, end_idx)
         else:
-            group_indices[group] = [end_idx_accum[i-1], end_idx]
+            group_indices[group] = [end_idx_accum[i - 1], end_idx]
     return group_indices
