@@ -50,6 +50,7 @@ test = window.make(
 The above code makes two datasets for training and testing. The output of the `make` method is an `EasyDict` 
 which allows for direct calling of dictionary keys in the form like `train.train_X`, or `test.test_X` for the training and testing
 sets, respectively.
+
 ---
 **auto_tuner.py**
 
