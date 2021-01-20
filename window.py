@@ -1,9 +1,9 @@
 import itertools
 from typing import List, Optional
 
+from easydict import EasyDict
 import numpy as np
 import pandas as pd
-from easydict import EasyDict
 from sklearn.preprocessing import LabelEncoder
 from tqdm import tqdm_notebook
 
