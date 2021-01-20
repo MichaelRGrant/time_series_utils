@@ -76,7 +76,7 @@ to make it an sklearn compatiable model. This is needed for the parameter sweepe
 Also the dictionary `train_test_data` is an EasyDict, to make direct calling of keys possible, i.e.
 `dict.key` instead of `dict["key"]` and should be of the form:
 ```
-train_test_.data.train.train_X
+train_test_data.train.train_X
 train_test_data.train.train_y
 train_test_data.validation.test_X
 train_test_data.validation.test_y
