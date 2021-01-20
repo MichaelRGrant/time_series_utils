@@ -48,5 +48,37 @@ test = window.make(
 ```
 
 The above code makes two datasets for training and testing. The output of the `make` method is an `EasyDict` 
-which allows for direct calling of dicionary keys in the form like `train.train_X`, or `test.test_X` for the training and testing
-sets, respectively. 
+which allows for direct calling of dictionary keys in the form like `train.train_X`, or `test.test_X` for the training and testing
+sets, respectively.
+---
+**auto_tuner.py**
+
+The AutoTune class in this module uses `skopt`'s `BayesSearchCV` functionality to tune a time-series 
+deep learning model. The model and search space must be defined by the user, and the class does the rest.
+A tune is performed, tested via cross validation, and then some number of the best tunes is validated
+using validation data. The best model is then fit and saved. 
+
+After this class is run, a dataframe with the best tunes, the parameters for those tunes,
+a dataframe of model metrics with of the validated best tunes, and the history object of the best
+model fit are all saved to the class; this can then be pickled. 
+
+```
+bayes_model_tuner = AutoTune(keras_model, train_test_data, bayes_param_grid, epochs=25)
+bayes_model_tuner.bayes_sweep(n_iter=10)
+scores_df = bayes_model_tuner.validate_best_tunes(
+    n_jobs=multiprocessing.cpu_count(), top_n_tunes=5
+)
+```
+
+The above function requires that the model created be wrapped in the `KerasClassifier` class
+to make it an sklearn compatiable model. This is needed for the parameter sweeper, `BayesSearchCV`.
+Also the dictionary `train_test_data` is an EasyDict, to make direct calling of keys possible, i.e.
+`dict.key` instead of `dict["key"]` and should be of the form:
+```
+train_test_.data.train.train_X
+train_test_data.train.train_y
+train_test_data.validation.test_X
+train_test_data.validation.test_y
+train_test_data.test.test_X
+train_Test_data.test_test_y
+```
