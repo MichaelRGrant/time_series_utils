@@ -40,14 +40,12 @@ class AutoTune:
     def __init__(
         self,
         model: Callable,
-        kmodel,
         data: Dict[str, Dict[str, Dict]],
         param_dict: Dict,
         scoring_func: str = "roc_auc",
         epochs: int = 30,
     ):
         self.model = model
-        self.kmodel = kmodel
         self.data = data
         self.param_dict = param_dict
         self.epochs = epochs
@@ -88,9 +86,9 @@ class AutoTune:
         verbose: int
         """
 
-        # keras_model = KerasClassifier(build_fn=self.model)
+        keras_model = KerasClassifier(build_fn=self.model)
         sweeper = BayesSearchCV(
-            estimator=self.kmodel,
+            estimator=keras_model,
             search_spaces=self.param_dict,
             scoring=self.scoring_func,
             n_iter=n_iter,
@@ -122,9 +120,8 @@ class AutoTune:
         # TODO figure out how to save the fit models to save the best one
         # TODO create a shared list that each job can save to and then save the best model from there.
         _, params = self.get_tune_results()
-        keras_model = clone(self.kmodel)
         scores = Parallel(n_jobs=n_jobs, verbose=0)(
-            delayed(self.fit_and_score)(clone(keras_model), params[tune_rank], tune_rank)
+            delayed(self.fit_and_score)(clone(KerasClassifier(build_fn=self.model)), params[tune_rank], tune_rank)
             for tune_rank in range(top_n_tunes)
         )
         scores_df = pd.concat(scores)
@@ -206,8 +203,8 @@ class AutoTune:
         _ = best_param_set.pop("epochs")
         epochs = self.valid_best_tunes.loc[0]["epochs"]
 
-        # model = self.model()
-        history = self.model.fit(
+        model = self.model()
+        history = model.fit(
             x=self.data.train.train_X,
             y=self.data.train.train_y,
             epochs=epochs,
@@ -220,7 +217,7 @@ class AutoTune:
         response = self.data.response
 
         self.best_history = history
-        self.model.save(
+        model.save(
             f"./models/horizon-{horizon}day_{response}"
         )
 
