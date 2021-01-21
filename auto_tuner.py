@@ -121,7 +121,7 @@ class AutoTune:
         # TODO create a shared list that each job can save to and then save the best model from there.
         _, params = self.get_tune_results()
         scores = Parallel(n_jobs=n_jobs, verbose=0)(
-            delayed(self.fit_and_score)(clone(self.model()), params[tune_rank], tune_rank)
+            delayed(self.fit_and_score)(clone(KerasClassifier(build_fn=self.model)), params[tune_rank], tune_rank)
             for tune_rank in range(top_n_tunes)
         )
         scores_df = pd.concat(scores)
@@ -202,7 +202,7 @@ class AutoTune:
         batch_size = best_param_set.pop("batch_size")
         _ = best_param_set.pop("epochs")
         epochs = self.valid_best_tunes.loc[0]["epochs"]
-        
+
         model = self.model()
         history = model.fit(
             x=self.data.train.train_X,
