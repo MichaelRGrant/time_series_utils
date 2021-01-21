@@ -10,6 +10,7 @@ from sklearn.base import clone
 from skopt import BayesSearchCV
 import tensorflow as tf
 from tensorflow.keras import callbacks
+from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
 
 
 class AutoTune:
@@ -84,9 +85,9 @@ class AutoTune:
         n_jobs: int
         verbose: int
         """
-
+        keras_model = KerasClassifier(clone(self.model))
         sweeper = BayesSearchCV(
-            estimator=self.model,
+            estimator=keras_model,
             search_spaces=self.param_dict,
             scoring=self.scoring_func,
             n_iter=n_iter,
@@ -164,7 +165,7 @@ class AutoTune:
 
         batch_size = param_set.pop("batch_size")
         _ = param_set.pop("epochs")
-        cloned_model = cloned_model.set_params(**param_set)
+        cloned_model = cloned_model(**param_set)
 
         history = cloned_model.fit(
             x=self.data.train.train_X,
