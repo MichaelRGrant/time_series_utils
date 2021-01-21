@@ -120,9 +120,8 @@ class AutoTune:
         # TODO figure out how to save the fit models to save the best one
         # TODO create a shared list that each job can save to and then save the best model from there.
         _, params = self.get_tune_results()
-        keras_model = KerasClassifier(build_fn=self.model)
         scores = Parallel(n_jobs=n_jobs, verbose=0)(
-            delayed(self.fit_and_score)(clone(keras_model), params[tune_rank], tune_rank)
+            delayed(self.fit_and_score)(clone(KerasClassifier(build_fn=self.model)), params[tune_rank], tune_rank)
             for tune_rank in range(top_n_tunes)
         )
         scores_df = pd.concat(scores)
@@ -167,7 +166,7 @@ class AutoTune:
 
         batch_size = param_set.pop("batch_size")
         _ = param_set.pop("epochs")
-        cloned_model = cloned_model(**param_set)
+        cloned_model = cloned_model.set_params(**param_set)
 
         history = cloned_model.fit(
             x=self.data.train.train_X,
