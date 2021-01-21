@@ -217,7 +217,7 @@ class AutoTune:
         response = self.data.response
 
         self.best_history = history
-        self.model.save(
+        model.save(
             f"./models/horizon-{horizon}day_{response}"
         )
 
