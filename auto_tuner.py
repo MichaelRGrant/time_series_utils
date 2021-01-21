@@ -35,6 +35,7 @@ class AutoTune:
         The number of epochs to use when validating the best
         tunes. This number should be set high because early stopping
         callbacks are used.
+    verbose: int
     """
 
     def __init__(
@@ -44,11 +45,13 @@ class AutoTune:
         param_dict: Dict,
         scoring_func: str = "roc_auc",
         epochs: int = 30,
+        verbose: int = 0,
     ):
         self.model = model
         self.data = data
         self.param_dict = param_dict
         self.epochs = epochs
+        self.verbose = verbose
         if scoring_func == "roc_auc":
             self.high_is_good = True
             self.scoring_func = metrics.make_scorer(metrics.roc_auc_score)
@@ -58,7 +61,7 @@ class AutoTune:
         self.es = callbacks.EarlyStopping(
             monitor="val_loss",
             mode="min",
-            verbose=1,
+            verbose=self.verbose,
             patience=6,
             min_delta=0.0005,
             restore_best_weights=True,
@@ -70,7 +73,6 @@ class AutoTune:
         n_iter: int = 10,
         refit: bool = False,
         n_jobs: int = -1,
-        verbose: int = 0,
     ):
         """
         Run the BayesSearchCV hyperparameter tuner.
@@ -95,7 +97,7 @@ class AutoTune:
             cv=cv,
             refit=refit,
             n_jobs=n_jobs,
-            verbose=verbose,
+            verbose=self.verbose,
         )
 
         sweeper.fit(self.data.train.train_X, self.data.train.train_y)
@@ -121,13 +123,19 @@ class AutoTune:
         # TODO create a shared list that each job can save to and then save the best model from there.
         _, params = self.get_tune_results()
         scores = Parallel(n_jobs=n_jobs, verbose=0)(
-            delayed(self.fit_and_score)(clone(KerasClassifier(build_fn=self.model)), params[tune_rank], tune_rank)
+            delayed(self.fit_and_score)(
+                clone(KerasClassifier(build_fn=self.model)),
+                params[tune_rank],
+                tune_rank,
+            )
             for tune_rank in range(top_n_tunes)
         )
         scores_df = pd.concat(scores)
         self.valid_best_tunes = scores_df
 
-        self.fit_best_model()
+        best_model = clone(self.model)
+
+        self.fit_best_model(best_model, params, scores_df, self.data)
 
         return scores_df
 
@@ -176,7 +184,7 @@ class AutoTune:
             batch_size=batch_size,
             shuffle=False,
             callbacks=[es],
-            verbose=0,
+            verbose=self.verbose,
         )
 
         model_metrics = self.get_metrics(cloned_model, threshold=0.5)
@@ -189,37 +197,32 @@ class AutoTune:
 
         return validation_results_df
 
-    def fit_best_model(self):
+    @staticmethod
+    def fit_best_model(model, params, valid_best_tunes, data):
         """
         After validation the top parameter sets from the tune,
         run train the model for a final time and save the model
         and history into the class.
         """
-        _, params = self.get_tune_results()
-        best_idx = self.valid_best_tunes["auroc"].idxmax()
+        best_idx = valid_best_tunes["auroc"].idxmax()
         best_param_set = params[best_idx]
 
         batch_size = best_param_set.pop("batch_size")
         _ = best_param_set.pop("epochs")
-        epochs = self.valid_best_tunes.loc[0]["epochs"]
+        epochs = valid_best_tunes.loc[best_idx]["epochs"]
 
-        model = self.model()
-        history = model.fit(
-            x=self.data.train.train_X,
-            y=self.data.train.train_y,
+        model.fit(
+            x=data.train.train_X,
+            y=data.train.train_y,
             epochs=epochs,
             batch_size=batch_size,
             shuffle=False,
             verbose=0,
         )
 
-        horizon = self.data.train.train_X.shape[1]
-        response = self.data.response
-
-        self.best_history = history
-        model.save(
-            f"./models/horizon-{horizon}day_{response}"
-        )
+        horizon = data.train.train_X.shape[1]
+        response = data.response
+        model.model.save(f"./models/horizon-{horizon}day_{response}")
 
     def get_metrics(
         self, cloned_model: tf.keras.models.Model, threshold: float = 0.50
