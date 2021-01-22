@@ -1,5 +1,5 @@
 import re
-from typing import Callable, Dict, Tuple
+from typing import Dict, Tuple
 
 from easydict import EasyDict
 from joblib import Parallel, delayed
@@ -10,7 +10,6 @@ from sklearn.base import clone
 from skopt import BayesSearchCV
 import tensorflow as tf
 from tensorflow.keras import callbacks
-from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
 
 
 class AutoTune:
@@ -21,7 +20,7 @@ class AutoTune:
 
     Parameters:
     -------
-    model: Callable
+    model: tf.keras.model
     data: dict
         A dictionary of the training, validation, and testing
         data. The data should be in the form of a numpy array
@@ -40,7 +39,7 @@ class AutoTune:
 
     def __init__(
         self,
-        model: Callable,
+        model,
         data: Dict[str, Dict[str, Dict]],
         param_dict: Dict,
         scoring_func: str = "roc_auc",
@@ -88,9 +87,8 @@ class AutoTune:
         verbose: int
         """
 
-        keras_model = KerasClassifier(build_fn=self.model)
         sweeper = BayesSearchCV(
-            estimator=keras_model,
+            estimator=self.model,
             search_spaces=self.param_dict,
             scoring=self.scoring_func,
             n_iter=n_iter,
@@ -124,7 +122,7 @@ class AutoTune:
         _, params = self.get_tune_results()
         scores = Parallel(n_jobs=n_jobs, verbose=0)(
             delayed(self.fit_and_score)(
-                clone(KerasClassifier(build_fn=self.model)),
+                clone(self.model),
                 params[tune_rank],
                 tune_rank,
             )
