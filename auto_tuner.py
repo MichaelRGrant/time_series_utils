@@ -95,7 +95,7 @@ class AutoTune:
             cv=cv,
             refit=refit,
             n_jobs=n_jobs,
-            verbose=self.verbose,
+            verbose=5,
         )
 
         sweeper.fit(self.data.train.train_X, self.data.train.train_y)
@@ -165,7 +165,7 @@ class AutoTune:
             monitor="val_loss",
             mode="min",
             verbose=1,
-            patience=10,
+            patience=6,
             min_delta=0.0005,
             restore_best_weights=True,
         )
